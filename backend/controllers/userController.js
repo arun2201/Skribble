@@ -5,7 +5,7 @@ const SECRET_KEY = process.env.SECRET_KEY;
 
 // Register User
 exports.registerUser = async (req, res) => {
-  console.log("On register user", req.email);
+  console.log("On register user", req.body);
   try {
     const { email, password } = req.body;
 
@@ -31,7 +31,7 @@ exports.registerUser = async (req, res) => {
 
 // Login User
 exports.loginUser = async (req, res) => {
-  console.log("Attempt to login: ", req.email);
+  console.log("Attempt to login: ", req.body);
   try {
     const { email, password } = req.body;
 

@@ -1,0 +1,98 @@
+# Root .gitignore for Skribble (frontend + backend)
+# Monorepo-wide ignore rules for Node.js / React / Vercel / OS / IDE / test artifacts
+
+# Node modules (monorepo safe pattern)
+**/node_modules/
+/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+logs/
+
+# Environment files (do not commit credentials)
+.env
+.env.*
+# Allow example env files to be tracked
+!.env.example
+
+# Production/build output
+/dist/
+/build/
+/out/
+.next/
+.nuxt/
+.vercel/
+
+# Bundler / cache files
+.cache/
+.parcel-cache/
+/.turbo/
+
+# Yarn PnP files (usually generated)
+/.pnp
+.pnp.js
+.pnp.cjs
+
+# Coverage and test results
+coverage/
+test-results.xml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE/editor files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS or editor swap/backup files
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Local databases, files and uploads
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+uploads/
+
+# Serverless / functions / deployment artifacts
+.serverless/
+.vercel/
+
+# Misc caches and temporary files
+.npm
+.eslintcache
+.prettiercache
+*.seed
+.tmp
+/temp
+
+# PID files and lock files
+pids/
+*.pid
+*.pid.lock
+
+# Storybook, Chromatic, Cypress artifacts
+.storybook/
+.chromatic/
+cypress/videos/
+cypress/screenshots/
+
+# Misc
+node_repl_history
+
+# Keep local package manager lockfiles and package.json tracked (DO NOT ignore):
+# package-lock.json, yarn.lock, pnpm-lock.yaml
+
+# End of file

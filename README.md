@@ -101,7 +101,3 @@ When `drawingUpdate` is received, the server broadcasts changes to other users i
 ## Contributing
 
 Contributions welcome. Open issues or PRs for improvements, bug fixes, or feature requests.
-
----
-
-If you want, I can also add a `LICENSE`, `docker-compose` for local development, or deployment CI configuration—would you like one of those added?

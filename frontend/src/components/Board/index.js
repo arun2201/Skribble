@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -166,7 +167,16 @@ function Board({ id }) {
     }
   }, [toolActionType]);
 
-  // console.log("Elements ",elements);
+  // Throttle socket emissions: emit at most once every 50ms instead of every pixel
+  const lastEmitTime = useRef(0);
+  const throttledEmit = useCallback((canvasId, elements) => {
+    const now = Date.now();
+    if (now - lastEmitTime.current > 50) {
+      const activeSocket = getSocket();
+      activeSocket.emit("drawingUpdate", { canvasId, elements });
+      lastEmitTime.current = now;
+    }
+  }, []);
 
   const handleMouseDown = (event) => {
     if (!isAuthorized) return;
@@ -176,13 +186,15 @@ function Board({ id }) {
   const handleMouseMove = (event) => {
     if (!isAuthorized) return;
     boardMouseMoveHandler(event);
-    socket.emit("drawingUpdate", { canvasId: id, elements });
+    throttledEmit(id, elements);
   };
 
   const handleMouseUp = () => {
     if (!isAuthorized) return;
     boardMouseUpHandler();
-    socket.emit("drawingUpdate", { canvasId: id, elements });
+    // Always emit on mouseUp to ensure the final state is synced
+    const activeSocket = getSocket();
+    activeSocket.emit("drawingUpdate", { canvasId: id, elements });
   };
 
   return (

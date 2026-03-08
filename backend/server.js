@@ -18,6 +18,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint (for keep-alive pings)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/canvas", canvasRoutes);
@@ -32,8 +37,11 @@ const io = new Server(server, {
   },
 });
 
-let canvasData = {};
-let i = 0;
+let canvasData = {};         // In-memory cache of canvas elements
+let saveTimers = {};         // Debounce timers for MongoDB writes
+
+const SAVE_DELAY_MS = 3000;  // Save to DB 3 seconds after last drawing update
+
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
@@ -55,7 +63,6 @@ io.on("connection", (socket) => {
       console.log("User ID:", userId);
 
       const canvas = await Canvas.findById(canvasId);
-      console.log(canvas);
       if (
         !canvas ||
         (String(canvas.owner) !== String(userId) &&
@@ -70,13 +77,11 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // socket.emit("authorized");
-
       socket.join(canvasId);
       console.log(`User ${socket.id} joined canvas ${canvasId}`);
 
       if (canvasData[canvasId]) {
-        console.log(canvasData);
+        //console.log(canvasData);
         socket.emit("loadCanvas", canvasData[canvasId]);
       } else {
         socket.emit("loadCanvas", canvas.elements);
@@ -89,28 +94,59 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("drawingUpdate", async ({ canvasId, elements }) => {
-    try {
-      canvasData[canvasId] = elements;
+  socket.on("drawingUpdate", ({ canvasId, elements }) => {
+    // Update in-memory cache (fast, for real-time sync)
+    canvasData[canvasId] = elements;
 
-      socket.to(canvasId).emit("receiveDrawingUpdate", elements);
+    // Broadcast to other users immediately
+    socket.to(canvasId).emit("receiveDrawingUpdate", elements);
 
-      const canvas = await Canvas.findById(canvasId);
-      if (canvas) {
-        // console.log('updating canvas... ', i++)
+    // Debounce the MongoDB write — only save 3 seconds after the last update
+    // This prevents hundreds of DB writes per second during active drawing
+    if (saveTimers[canvasId]) {
+      clearTimeout(saveTimers[canvasId]);
+    }
+    saveTimers[canvasId] = setTimeout(async () => {
+      try {
         await Canvas.findByIdAndUpdate(
           canvasId,
-          { elements },
+          { elements: canvasData[canvasId] },
           { new: true, useFindAndModify: false }
         );
+        console.log(`Canvas ${canvasId} saved to DB`);
+      } catch (error) {
+        console.error("Error saving canvas to DB:", error);
       }
-    } catch (error) {
-      console.error(error);
-    }
+      delete saveTimers[canvasId];
+    }, SAVE_DELAY_MS);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
+
+    // Clean up canvasData for rooms with no remaining users
+    // This prevents the in-memory cache from growing forever
+    for (const canvasId of Object.keys(canvasData)) {
+      const room = io.sockets.adapter.rooms.get(canvasId);
+      if (!room || room.size === 0) {
+        // No one is in this canvas room anymore — flush to DB and free memory
+        if (saveTimers[canvasId]) {
+          clearTimeout(saveTimers[canvasId]);
+          delete saveTimers[canvasId];
+        }
+        // Final save before cleanup
+        Canvas.findByIdAndUpdate(
+          canvasId,
+          { elements: canvasData[canvasId] },
+          { new: true, useFindAndModify: false }
+        ).then(() => {
+          console.log(`Canvas ${canvasId} saved and removed from memory`);
+        }).catch((err) => {
+          console.error("Error saving canvas on cleanup:", err);
+        });
+        delete canvasData[canvasId];
+      }
+    }
   });
 });
 

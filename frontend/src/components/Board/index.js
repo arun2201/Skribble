@@ -9,7 +9,7 @@ import rough from "roughjs";
 import boardContext from "../../store/board-context";
 import { TOOL_ACTION_TYPES, TOOL_ITEMS } from "../../constants";
 import toolboxContext from "../../store/toolbox-context";
-import socket from "../../utils/socket";
+import socket, { getSocket } from "../../utils/socket";
 
 import classes from "./index.module.css";
 
@@ -43,29 +43,31 @@ function Board({ id }) {
 
   useEffect(() => {
     if (id) {
+      const activeSocket = getSocket(); // Get socket with latest auth token
+
       // Join the canvas room (no need for userId)
-      socket.emit("joinCanvas", { canvasId: id });
+      activeSocket.emit("joinCanvas", { canvasId: id });
 
       // Listen for updates from other users
-      socket.on("receiveDrawingUpdate", (updatedElements) => {
+      activeSocket.on("receiveDrawingUpdate", (updatedElements) => {
         setElements(updatedElements);
       });
 
       // Load initial canvas data
-      socket.on("loadCanvas", (initialElements) => {
+      activeSocket.on("loadCanvas", (initialElements) => {
         setElements(initialElements);
       });
 
-      socket.on("unauthorized", (data) => {
+      activeSocket.on("unauthorized", (data) => {
         console.log(data.message);
         alert("Access Denied: You cannot edit this canvas.");
         setIsAuthorized(false);
       });
 
       return () => {
-        socket.off("receiveDrawingUpdate");
-        socket.off("loadCanvas");
-        socket.off("unauthorized");
+        activeSocket.off("receiveDrawingUpdate");
+        activeSocket.off("loadCanvas");
+        activeSocket.off("unauthorized");
       };
     }
   }, [id]);

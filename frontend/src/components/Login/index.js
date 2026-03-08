@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./index.module.css";
 import boardContext from "../../store/board-context";
+import { getSocket } from "../../utils/socket";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -26,6 +27,7 @@ const Login = () => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem("whiteboard_user_token", data.token);
+        getSocket(); // Reconnect socket with the new auth token
         setUserLoginStatus(true);
         navigate("/");
       } else {

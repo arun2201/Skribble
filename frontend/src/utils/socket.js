@@ -1,9 +1,30 @@
 import { io } from "socket.io-client";
 
-const token = localStorage.getItem("whiteboard_user_token");
+let socket = null;
 
-const socket = io(process.env.REACT_APP_NODE_API_URL, {
-  extraHeaders: token ? { Authorization: `Bearer ${token}` } : {}, // Only send if token exists
-});
+function getSocket() {
+  const token = localStorage.getItem("whiteboard_user_token");
 
+  // If a socket already exists with the correct token, return it
+  if (socket && socket.connected) {
+    return socket;
+  }
+
+  // Disconnect existing socket if any
+  if (socket) {
+    socket.disconnect();
+  }
+
+  // Create a new socket connection with the current token
+  socket = io(process.env.REACT_APP_NODE_API_URL, {
+    extraHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  return socket;
+}
+
+// Initialize socket on first import
+socket = getSocket();
+
+export { getSocket };
 export default socket;

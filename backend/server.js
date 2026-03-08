@@ -95,6 +95,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("drawingUpdate", ({ canvasId, elements }) => {
+    // Skip if canvasId is missing or invalid
+    if (!canvasId || canvasId === "undefined") return;
+
     // Update in-memory cache (fast, for real-time sync)
     canvasData[canvasId] = elements;
 
@@ -127,6 +130,11 @@ io.on("connection", (socket) => {
     // Clean up canvasData for rooms with no remaining users
     // This prevents the in-memory cache from growing forever
     for (const canvasId of Object.keys(canvasData)) {
+      // Skip invalid keys that may have been stored
+      if (!canvasId || canvasId === "undefined") {
+        delete canvasData[canvasId];
+        continue;
+      }
       const room = io.sockets.adapter.rooms.get(canvasId);
       if (!room || room.size === 0) {
         // No one is in this canvas room anymore — flush to DB and free memory
